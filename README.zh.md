@@ -2,7 +2,7 @@
 
 ## 用法
 
-1. 在线工具：https://editcue.github.io/HtmlGenScss/
+1. 在线工具：https://editcue.github.io/html-generate-scss-online-tool/
 
 2. 将 html 文本复制到左/顶部文本区域
 
