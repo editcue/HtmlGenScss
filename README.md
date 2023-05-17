@@ -2,7 +2,7 @@
 
 ## Usage
 1. Online tool:
-https://editcue.github.io/HtmlGenScss/
+https://editcue.github.io/html-generate-scss-online-tool/
 2. Copy html text into left/top textarea
 3. Click "Copy SCSS/HTML" buttons
 
