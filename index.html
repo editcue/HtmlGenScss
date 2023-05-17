@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<!--viewport-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML Generate SCSS</title>
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+	<!-- 引入 Prettier -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/prettier/2.5.1/standalone.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/prettier/2.5.1/parser-babel.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/prettier/2.5.1/parser-html.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/prettier/2.5.1/parser-postcss.min.js"></script>
+
+	<!-- 引入 CodeMirror 的核心文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+	<!-- 引入 CodeMirror 的 XML 模式文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/mode/xml/xml.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/hint/xml-hint.min.js"></script>
+	<!-- 引入 CodeMirror 的 HTML 模式文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/lint/html-lint.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/hint/html-hint.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/mode/htmlmixed/htmlmixed.min.js"></script>
+
+	<!-- 引入 CodeMirror 的 VUE 模式文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/mode/vue/vue.min.js"></script>
+
+	<!-- 引入 CodeMirror 的 js 模式文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/mode/javascript/javascript.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/hint/javascript-hint.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/lint/javascript-lint.min.js"></script>
+
+
+	<!-- 引入 CodeMirror 的 CSS 模式文件 -->
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/mode/css/css.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/hint/css-hint.min.js"></script>
+	<script src="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/addon/lint/css-lint.min.js"></script>
+
+	<!-- 引入 CodeMirror 的 CSS 文件 -->
+	<link href="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/codemirror.min.css" rel="stylesheet">
+	<link href="https://cdn.bootcdn.net/ajax/libs/codemirror/6.65.7/theme/dracula.min.css" rel="stylesheet">
+
+	<!-- 引入 转换器 -->
+	<script src="index.js"></script>
+
+	<style>
+		html, body {
+			position: fixed;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			display: flex;
+		}
+
+		.CodeMirror {
+			width: 100%;
+			height: 100%;
+		}
+
+		#result {
+			position: relative;
+		}
+
+		#drag-bar {
+			flex-shrink: 0;
+		}
+
+		/* 宽高比为竖屏*/
+		@media screen and (max-aspect-ratio: 1/1) {
+			body {
+				flex-direction: column;
+			}
+
+			#editor {
+				width: 100%;
+				height: 50%;
+			}
+
+			#result {
+				width: 100%;
+				height: 50%;
+			}
+
+			#drag-bar {
+				width: 100%;
+				height: 20px;
+				background-color: #000;
+				cursor: row-resize;
+			}
+		}
+
+		/* 宽高比为横屏*/
+		@media screen and (min-aspect-ratio: 1/1) {
+			body {
+				flex-direction: row;
+			}
+
+			#editor {
+				width: 50%;
+				height: 100%;
+			}
+
+			#result {
+				width: 50%;
+				height: 100%;
+			}
+
+			#drag-bar {
+				width: 20px;
+				height: 100%;
+				background-color: #000;
+				cursor: col-resize;
+			}
+		}
+
+		#btn-copy-html {
+			position: absolute;
+			top: 0;
+			right: 0;
+			width: 100px;
+			height: 30px;
+			line-height: 30px;
+			text-align: center;
+			background-color: #000;
+			color: #fff;
+			cursor: pointer;
+			z-index: 999;
+		}
+
+		#btn-copy-scss {
+			position: absolute;
+			top: 30px;
+			right: 0;
+			width: 100px;
+			height: 30px;
+			line-height: 30px;
+			text-align: center;
+			background-color: #000;
+			color: #fff;
+			cursor: pointer;
+			z-index: 999;
+		}
+	</style>
+</head>
+<body>
+<!-- 创建一个 div 元素作为 CodeMirror 的容器 -->
+<div id="editor"></div>
+<div id="drag-bar"></div>
+<div id="result">
+	<div id="btn-copy-html" onclick="javascript:copyHtml();">Copy HTML</div>
+	<div id="btn-copy-scss" onclick="javascript:copyScss();">Copy SCSS</div>
+</div>
+
+<script type="module">
+	let htmlStrCp = '', scssStrCp = '';
+
+	function copyText(text) {
+		console.log(text)
+		let input = document.createElement('textarea')
+		input.setAttribute('readonly', 'readonly')
+		input.value = text
+		document.body.appendChild(input)
+		input.select()
+		if (document.execCommand('copy')) {
+			document.execCommand('copy')
+			let toast = document.createElement('div')
+			toast.setAttribute('style', 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 10px 20px; background-color: rgba(0,0,0,.5); color: #fff; border-radius: 5px;')
+			toast.innerText = '复制成功'
+			document.body.appendChild(toast)
+			setTimeout(() => {
+				document.body.removeChild(toast)
+			}, 1000)
+			console.log('复制成功')
+		} else {
+			console.log('复制失败')
+		}
+		document.body.removeChild(input)
+	}
+
+	function copyHtml() {
+		copyText(htmlStrCp)
+	}
+
+	function copyScss() {
+		copyText(scssStrCp)
+	}
+
+	window.copyHtml = copyHtml;
+	window.copyScss = copyScss;
+	let dragBarDom = document.getElementById('drag-bar');
+	let editorRawDom = document.getElementById('editor');
+	let editorResDom = document.getElementById('result');
+	// listen to drag event
+	dragBarDom.addEventListener('mousedown', function (e) {
+		let startX = e.clientX;
+		let startY = e.clientY;
+		let startWidthRaw = parseInt(document.defaultView.getComputedStyle(editorRawDom).width, 10);
+		let startHeightRaw = parseInt(document.defaultView.getComputedStyle(editorRawDom).height, 10);
+		let startWidthRes = parseInt(document.defaultView.getComputedStyle(editorResDom).width, 10);
+		let startHeightRes = parseInt(document.defaultView.getComputedStyle(editorResDom).height, 10);
+
+		document.documentElement.addEventListener('mousemove', doDrag, false);
+		document.documentElement.addEventListener('mouseup', stopDrag, false);
+
+		function doDrag(e) {
+			if (window.innerWidth / window.innerHeight > 1) {
+				// 横屏 不改变高度 左右栏宽度 相加等于 100%
+				editorRawDom.style.width = (startWidthRaw + e.clientX - startX) + 'px';
+				editorResDom.style.width = (startWidthRes - e.clientX + startX) + 'px';
+			} else {
+				// 竖屏 不改变宽度
+				editorRawDom.style.height = (startHeightRaw + e.clientY - startY) + 'px';
+				editorResDom.style.height = (startHeightRes - e.clientY + startY) + 'px';
+			}
+		}
+
+		function stopDrag() {
+			document.documentElement.removeEventListener('mousemove', doDrag, false);
+			document.documentElement.removeEventListener('mouseup', stopDrag, false);
+		}
+	}, false);
+
+	// listen to resize event
+	window.addEventListener('resize', function () {
+		if (window.innerWidth / window.innerHeight > 1) {
+			// 横屏
+			editorRawDom.style.width = '50%';
+			editorRawDom.style.height = '100%';
+			editorResDom.style.width = '50%';
+			editorResDom.style.height = '100%';
+		} else {
+			// 竖屏
+			editorRawDom.style.width = '100%';
+			editorRawDom.style.height = '50%';
+			editorResDom.style.width = '100%';
+			editorResDom.style.height = '50%';
+		}
+	}, false);
+
+	function prettiHtml(str) {
+		return prettier.format(str, {
+			parser: "html",
+			plugins: prettierPlugins,
+			htmlWhitespaceSensitivity: "ignore",
+			tabWidth: 4,
+			useTabs: false,
+			semi: false,
+			singleQuote: true,
+			trailingComma: "none",
+			bracketSpacing: true,
+			jsxBracketSameLine: false,
+			arrowParens: "avoid",
+			proseWrap: "preserve",
+			endOfLine: "lf"
+		});
+	}
+
+	function prettiScss(str) {
+		return prettier.format(str, {
+			parser: "scss",
+			plugins: prettierPlugins,
+			htmlWhitespaceSensitivity: "ignore",
+			tabWidth: 4,
+			useTabs: false,
+			semi: false,
+			singleQuote: true,
+			trailingComma: "none",
+			bracketSpacing: true,
+			jsxBracketSameLine: false,
+			arrowParens: "avoid",
+			proseWrap: "preserve",
+			endOfLine: "lf"
+		});
+	}
+
+
+	// 创建一个 CodeMirror 实例
+	var editorRaw = CodeMirror(document.getElementById("editor"), {
+		// 设置模式为 HTML
+		mode: "vue",
+		// 设置主题
+		theme: "dracula",
+		// 设置行号
+		lineNumbers: true,
+		// 设置初始值
+		value: `<h1>Hello, World!</h1>`,
+		onLoad: function () {
+			hljs.highlightAll();
+		}
+	});
+	// 监听改变事件
+	editorRaw.on("change", function (cm, change) {
+		let htmlStr = cm.getValue()
+		convert(htmlStr)
+	});
+
+	// 创建一个 CodeMirror 实例
+	var editorRes = CodeMirror(document.getElementById("result"), {
+		// 设置模式为 HTML
+		mode: "vue",
+		// 设置主题
+		theme: "dracula",
+		// 设置行号
+		lineNumbers: true,
+		// 设置初始值
+		value: "",
+		onLoad: function () {
+		}
+	});
+
+
+	function convert(htmlStr) {
+		let dom = document.createElement('div')
+		dom.innerHTML = htmlStr
+		let scssStr = generateNestedScssByElementTree(dom, true)
+		scssStr = prettiScss(scssStr)
+		let htmlNewStr = dom.innerHTML
+		htmlNewStr = prettiHtml(htmlNewStr)
+		editorRes.setValue(`${htmlNewStr}\n<style lang="scss">\n${scssStr}\n<style>`)
+		htmlStrCp = htmlNewStr
+		scssStrCp = scssStr
+		return {scssStr, htmlNewStr}
+	}
+
+	let testString = ''
+	editorRaw.setValue(testString)
+	convert(testString)
+</script>
+</body>
+</html>
